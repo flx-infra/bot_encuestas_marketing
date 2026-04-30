@@ -71,8 +71,6 @@ services:
     container_name: flexxus-frontend
     ports:
       - "5061:5061"
-    depends_on:
-      - backend
     networks:
       - traefik
     deploy:
