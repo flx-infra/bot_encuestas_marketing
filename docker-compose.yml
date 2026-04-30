@@ -128,7 +128,7 @@ services:
     healthcheck:
       disable: true
     ports:
-      - "5061:80"
+      - "5030:80"
     depends_on:
       - backend
     networks:
