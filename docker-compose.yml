@@ -1,0 +1,100 @@
+version: '3.8'
+
+# ==============================================================================
+# docker-compose.yml
+#
+# Uso principal: build/test local de las imagenes que luego se publican y
+# despliegan en Swarm via docker-stack.yml.
+#
+# Build y push:
+#   docker compose build
+#   docker compose push       (requiere DOCKER_REGISTRY definido en .env)
+#
+# Run local:
+#   docker compose up -d
+# ==============================================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: flexxus-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis_dev_password}", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_dev_password}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    image: ${BACKEND_IMAGE:-flexxus-bot-backend:latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flexxus-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 5060
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
+    ports:
+      - "5060:5060"
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - traefik 
+    deploy:
+      placement:
+        constraints:
+          - ${NODE}   
+    logging:
+      driver: loki
+      options:
+        loki-url: ${LOKI_URL}  
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-flexxus-bot-frontend:latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flexxus-frontend
+    ports:
+      - "5061:5061"
+    depends_on:
+      - backend
+    networks:
+      - traefik
+    deploy:
+      placement:
+        constraints:
+          - ${NODE}
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    logging:
+      driver: loki
+      options:
+        loki-url: ${LOKI_URL}  
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  traefik:
+    name: traefik
+    external: true
