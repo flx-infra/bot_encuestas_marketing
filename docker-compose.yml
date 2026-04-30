@@ -32,10 +32,6 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:-flexxus-bot-backend:latest}
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: flexxus-backend
     environment:
       # App
       NODE_ENV: ${NODE_ENV:-development}
@@ -127,10 +123,6 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:-flexxus-bot-frontend:latest}
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: flexxus-frontend
     ports:
       - "5061:5061"
     depends_on:
@@ -159,5 +151,5 @@ volumes:
 # ============================================
 networks:
   traefik:
-    name: traefik
+    name: traefik-network
     external: true
