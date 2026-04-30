@@ -125,6 +125,8 @@ services:
 
   frontend:
     image: fabreguesm/flexxus-bot-frontend:1.0.0
+    healthcheck:
+      disable: true
     ports:
       - "5061:80"
     depends_on:
